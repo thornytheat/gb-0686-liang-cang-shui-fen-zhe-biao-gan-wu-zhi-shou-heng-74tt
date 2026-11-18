@@ -1,1 +1,14 @@
-{% extends "base.html" %}{% block content %}<div class="formula"><span>净重 × 净粮率</span><b>×</b><span>干物质率</span><b>÷</b><span>标准干物质率</span><strong>折标 kg</strong></div><div class="grain-columns"><section class="panel span-two"><div class="panel__head"><h2>折标证据</h2></div>{{ledger(data.rows,['id','net_kg','clean_kg','dry_kg','standard_kg'])}}</section><section class="panel"><div class="panel__head"><h2>干物质标尺</h2><sup>04</sup></div><div class="rulers">{% for row in result.balances %}<div><label>{{row.bin}}</label><b>{{'%.2f'|format(row.dry_kg|float)}} kg</b><div class="ruler"><i style="width:{{(row.dry_kg|float / row.net_kg|float * 100) if row.net_kg|float else 0}}%"></i></div></div>{% endfor %}</div></section></div>{% endblock %}
+{% extends "base.html" %}{% block content %}
+<div class="formula"><span>净重 × 净粮率</span><b>×</b><span>干物质率</span><b>÷</b><span>标准干物质率</span><strong>折标 kg</strong></div>
+<div class="grain-columns">
+<section class="panel span-two"><div class="panel__head"><h2>收货事实</h2><span>{{data.rows|length}} 车次</span></div>
+{{ledger(data.rows,['trip','id','bin','net_kg','moisture','impurity','dry_kg','standard_kg','version','state'])}}
+<p class="hint">重量来自地磅回执，水杂来自化验复验；按车次合并为一张事实，仓批与结算只读这张事实。</p></section>
+<section class="panel"><div class="panel__head"><h2>待续跑车次</h2><sup>04</sup></div>
+{% for item in result.pending %}<article class="verdict"><b>{{item.id}}</b><span>待续跑</span><small>车次 {{item.trip}} · 待补 {{item.missing|join(', ')}} · 原行 {{item.lines|join(', ')}}</small></article>{% else %}<p class="hint">没有待补字段的车次。</p>{% endfor %}
+<dl><dt>合并重量 kg</dt><dd>{{data.metrics['合并重量 kg']}}</dd><dt>干物质 kg</dt><dd>{{data.metrics['干物质 kg']}}</dd><dt>折标 kg</dt><dd>{{data.metrics['折标 kg']}}</dd></dl></section>
+<section class="panel span-three"><div class="panel__head"><h2>字段来源</h2><a class="btn" href="/api/evidence-fields.csv?run={{result.manifest.run_id}}">导出字段来源</a></div>
+<div class="table-wrap"><table class="ledger"><thead><tr><th>车次</th><th>字段</th><th>取值</th><th>来源</th><th>原行</th><th>版本</th><th>公式 / 依据</th></tr></thead><tbody>
+{% for fact in data.rows %}{% for field in ['bin','gross','tare','unit','net_kg','moisture','impurity','clean_kg','dry_kg','standard_kg'] %}{% set ev = fact.evidence.get(field,{}) %}<tr><td>{{fact.trip}}</td><td>{{columns.get(field,field)}}</td><td class="num">{% if field.endswith('_kg') and fact.get(field) is not none %}{{'%.3f'|format(fact.get(field)|float)}}{% else %}{{fact.get(field,'—')}}{% endif %}</td><td>{{ev.get('source_label','')}}</td><td>{{ev.get('line','')}}</td><td>{{ev.get('version','')}}</td><td>{{ev.get('formula','')}}{% if ev.get('inputs') and ev.get('source') != 'derived' %} · {{ev.get('inputs')|join('、')}}{% endif %}</td></tr>{% endfor %}{% else %}<tr><td colspan="7">没有已完成的收货事实。</td></tr>{% endfor %}
+</tbody></table></div></section>
+</div>{% endblock %}

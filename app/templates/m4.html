@@ -1,1 +1,13 @@
-{% extends "base.html" %}{% block content %}<div class="grain-columns"><section class="panel span-two"><div class="panel__head"><h2>保留磅单</h2></div>{{ledger(data.rows,['id','bin','version','net_kg','standard_kg'])}}</section><section class="panel"><div class="panel__head"><h2>车次裁决单</h2></div>{% for q in result.quarantine if q.code in ['CONFLICT','DUPLICATE'] %}<article class="verdict"><b>{{q.key}}</b><span>{{q.code}}</span><small>原行 {{q.line}} · {{q.detail}}</small></article>{% endfor %}</section></div>{% endblock %}
+{% extends "base.html" %}{% block content %}
+<div class="grain-columns">
+<section class="panel span-two"><div class="panel__head"><h2>车次事实</h2><span>{{data.rows|length}} 车</span></div>
+{{ledger(data.rows,['trip','id','bin','version','net_kg','dry_kg','standard_kg'])}}
+<p class="hint">地磅原地重试沿用原磅单号与车次，不会生成第二车。</p></section>
+<section class="panel"><div class="panel__head"><h2>裁决单</h2><sup>05</sup></div>
+{% for q in result.quarantine if q.code in ['CONFLICT','DUPLICATE','MISSING','INCOMPLETE'] %}<article class="verdict"><b>{{q.key or q.trip}}</b><span>{{q.code}}</span><small>原行 {{q.line}} · {{q.detail}}</small></article>{% else %}<p class="hint">没有需要裁决的回执。</p>{% endfor %}
+<dl><dt>源回执</dt><dd>{{result.receipts|length}}</dd><dt>待续跑</dt><dd>{{result.pending|length}}</dd></dl></section>
+<section class="panel span-three"><div class="panel__head"><h2>原回执</h2></div>
+<div class="table-wrap"><table class="ledger"><thead><tr><th>车次</th><th>磅单号</th><th>来源</th><th>版本</th><th>原行</th><th>贡献字段</th><th>原回执</th></tr></thead><tbody>
+{% for fact in data.rows %}{% for r in fact._receipts %}<tr><td>{{fact.trip}}</td><td>{{r.id}}</td><td>{{r.source_label}}</td><td class="num">{{r.version}}</td><td>{{r.line}}</td><td>{{r.selected_fields|join(', ') if r.contributed else '—'}}</td><td><code>{{r.digest[:12]}}</code></td></tr>{% endfor %}{% else %}<tr><td colspan="7">没有已完成的车次事实。</td></tr>{% endfor %}
+</tbody></table></div></section>
+</div>{% endblock %}

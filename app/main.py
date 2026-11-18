@@ -44,6 +44,20 @@ def create_app():
         data=request.get_json(silent=True)
         if not isinstance(data,dict): raise DomainError("BODY","请求必须是对象")
         return jsonify(store.review(run_id,data.get("version"),data.get("decision")))
+    @app.get("/api/evidence-fields.csv")
+    def evidence_fields():
+        from app.source_contract import evidence_rows
+        result=store.fetch(request.args["run"]) if request.args.get("run") else run()
+        rows=evidence_rows(result.get("records",[]),result["manifest"]["run_id"])
+        stream=io.StringIO(newline="");writer=csv.writer(stream)
+        writer.writerow(["批次","车次","磅单号","字段","取值","来源","来源回执","原磅单号","原行","版本","公式","输入字段"])
+        for row in rows:
+            writer.writerow([row["run"],row["trip"],row["id"],row["field"],row["value"],
+                             row["source_label"],row["receipt"],row["raw_id"],
+                             row["line"],row["version"],row["formula"],row["inputs"]])
+        return Response("\ufeff"+stream.getvalue(),content_type="text/csv; charset=utf-8",
+                        headers={"Content-Disposition":"attachment; filename=evidence-fields.csv"})
+
     @app.get("/api/evidence.csv")
     def evidence():
         result=store.fetch(request.args["run"]) if request.args.get("run") else run()

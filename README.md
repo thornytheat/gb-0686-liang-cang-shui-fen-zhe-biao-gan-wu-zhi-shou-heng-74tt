@@ -18,8 +18,8 @@ docker compose config --quiet
 
 - M1 磅单接收：接收磅单并检查结构，入口 `/m/1`、`GET/POST /api/m1`。
 - M2 水杂契约：校核水杂和单位，入口 `/m/2`、`GET/POST /api/m2`。
-- M3 折标计算：扣杂后按干物质折标，入口 `/m/3`、`GET/POST /api/m3`。
-- M4 车次归并：按版本裁决冲突磅单，入口 `/m/4`、`GET/POST /api/m4`。
+- M3 收货核对：按来源契约合并地磅与化验回执，显示合并重量与干物质并导出字段来源，入口 `/m/3`、`GET/POST /api/m3`。
+- M4 车次归并：核对车次身份并保留原回执，入口 `/m/4`、`GET/POST /api/m4`。
 - M5 仓批平衡：逐仓核对干物质平衡，入口 `/m/5`、`GET/POST /api/m5`。
 - M6 结算复核：结算到分并保留尾差依据，入口 `/m/6`、`GET/POST /api/m6`。
 - M7 批次追溯：检查行数平衡与证据摘要，入口 `/m/7`、`GET/POST /api/m7`。
@@ -30,10 +30,11 @@ docker compose config --quiet
 2. 修改CSV单元格或参数并重跑，保留行号与输入摘要。
 3. 在最后一步复核，旧版本提交返回409。
 4. 证据CSV包含采信行和隔离行，重跑相同内容复用批次。
+5. 地磅补传（`split_scale.csv`）与化验复验（`split_lab.csv`）分两次上传同一车次，M3 显示合并后的重量、干物质与字段来源；字段来源可用 `/api/evidence-fields.csv` 导出。
 
 ## 数据与目录
 
-`app/modules/` 按业务切分；`sample_data/` 为UTF-8 BOM、GB18030及干净/脏样例；`tests/` 含规则与端到端测试。SQLite保存运行与复核，命名卷records保留重启后的记录。若需从头开始，可先停止服务并在确认不再需要记录后删除该项目records卷。
+`app/source_contract.py` 定义来源契约与字段级合并；`app/ledger.py` 保存回执、车次事实与入仓流水；`app/modules/` 按业务切分；`sample_data/` 为UTF-8 BOM、GB18030及干净/脏样例；`tests/` 含规则与端到端测试。SQLite保存运行与复核，命名卷records保留重启后的记录。若需从头开始，可先停止服务并在确认不再需要记录后删除该项目records卷。
 
 ## 定义与边界
 

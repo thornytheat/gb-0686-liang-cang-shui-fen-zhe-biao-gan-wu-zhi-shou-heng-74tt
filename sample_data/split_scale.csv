@@ -1,0 +1,4 @@
+id,bin,gross,tare,unit,version,source,trip
+W0001,仓1,1200,200,kg,1,地磅,T0001
+W0002,仓2,1210,200,kg,1,地磅,T0002
+W0003,仓3,1.220,.2,t,1,地磅,T0003

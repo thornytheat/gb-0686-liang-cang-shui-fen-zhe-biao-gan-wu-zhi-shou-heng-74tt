@@ -48,10 +48,12 @@ def rows_from(raw, required):
             good.append(row)
     except csv.Error: raise DomainError("CSV","CSV引号未闭合")
     if total==0: raise DomainError("HEADER_ONLY","只有字段名")
-    return {"raw":good,"quarantine":quarantine,"input_count":total,"blank_count":blank,"encoding":encoding}
+    return {"raw":good,"quarantine":quarantine,"input_count":total,"blank_count":blank,
+            "encoding":encoding,"header":header}
 def serial(value):
     if isinstance(value,Decimal): return str(value)
     if isinstance(value,datetime): return value.isoformat()
     if isinstance(value,dict): return {k:serial(v) for k,v in value.items()}
     if isinstance(value,(list,tuple)): return [serial(v) for v in value]
+    if isinstance(value,(set,frozenset)): return sorted(serial(v) for v in value)
     return value

@@ -10,8 +10,8 @@
 |---|---|---|---|---|
 | M1 磅单接收 | 接收磅单并检查结构 | `/api/m1` | `app/modules/m1_intake/rules.py` `app/modules/m1_intake/service.py` | `tests/test_m1_intake.py` |
 | M2 水杂契约 | 校核水杂和单位 | `/api/m2` | `app/modules/m2_contract/rules.py` `app/modules/m2_contract/service.py` | `tests/test_m2_contract.py` |
-| M3 折标计算 | 扣杂后按干物质折标 | `/api/m3` | `app/modules/m3_dryweight/rules.py` `app/modules/m3_dryweight/service.py` | `tests/test_m3_dryweight.py` |
-| M4 车次归并 | 按版本裁决冲突磅单 | `/api/m4` | `app/modules/m4_truckmerge/rules.py` `app/modules/m4_truckmerge/service.py` | `tests/test_m4_truckmerge.py` |
+| M3 收货核对 | 按来源契约合并地磅与化验回执并折标 | `/api/m3` | `app/source_contract.py` `app/modules/m3_dryweight/rules.py` `app/modules/m3_dryweight/service.py` | `tests/test_m3_dryweight.py` `tests/test_source_contract.py` |
+| M4 车次归并 | 核对车次身份并保留原回执 | `/api/m4` | `app/modules/m4_truckmerge/rules.py` `app/modules/m4_truckmerge/service.py` | `tests/test_m4_truckmerge.py` |
 | M5 仓批平衡 | 逐仓核对干物质平衡 | `/api/m5` | `app/modules/m5_balance/rules.py` `app/modules/m5_balance/service.py` | `tests/test_m5_balance.py` |
 | M6 结算复核 | 结算到分并保留尾差依据 | `/api/m6` | `app/modules/m6_settlement/rules.py` `app/modules/m6_settlement/service.py` | `tests/test_m6_settlement.py` |
 | M7 批次追溯 | 检查行数平衡与证据摘要 | `/api/m7` | `app/modules/m7_trace/rules.py` `app/modules/m7_trace/service.py` | `tests/test_m7_trace.py` |
@@ -28,10 +28,15 @@
 | TRAP-14 | 同版矛盾 | 后写覆盖 | 同版均隔离 | `app/modules/m4_truckmerge/rules.py` | `tests/test_m4_truckmerge.py::test_conflict_keeps_neither` |
 | TRAP-15 | 吨与千克 | 数量差千倍 | 统一kg | `app/modules/m2_contract/rules.py` | `tests/test_m2_contract.py::test_unit_ton` |
 | TRAP-24 | 结算尾差 | 分录不守恒 | 最大余额分到分 | `app/modules/m6_settlement/rules.py` | `tests/test_m6_settlement.py::test_largest_remainder_conservation` |
+| TRAP-25 | 补传只带重量 | 整行取最高版丢掉重量 | 字段级按来源裁决 | `app/source_contract.py` | `tests/test_source_contract.py::test_field_level_merge_keeps_both_sides` |
+| TRAP-26 | 复验只带水杂 | 锁首版漏掉复验 | 每字段单独按版本裁决 | `app/source_contract.py` | `tests/test_source_contract.py::test_retest_overrides_only_its_own_fields` |
+| TRAP-27 | 地磅重试 | 生成第二车次/重复入仓 | 车次主键 + 原磅单身份 | `app/ledger.py` | `tests/test_source_contract.py::test_split_files_resume_and_single_entry` |
+| TRAP-28 | 切换失败 | 露出半张事实 | 回执先落、事实单事务切换 | `app/pipeline.py` `app/ledger.py` | `tests/test_source_contract.py::test_switch_failure_never_exposes_half_fact` |
+| TRAP-29 | 进程中断 | 未完成车次丢失 | 运行日志恢复后按车次续跑 | `app/ledger.py` | `tests/test_source_contract.py::test_crash_recovery_resumes_never_completed_trip` |
 
 ## 对账规则
 
-输入逻辑行数 = 采信行数 + 隔离行数；空行单列。每条重复、冲突、超限、缺失均保留原始行号与原因码。计算阶段的输出数量可聚合，原始采信records始终保留，业务平衡另按模块给出的重量、时长、电量或座席数量核对。
+输入逻辑行数 = 采信回执行数 + 隔离回执行数；空行单列。车次可由多张回执合成，追溯按回执计行。每条重复、冲突、超限、缺失均保留原始行号与原因码。计算阶段的输出数量可聚合，原始采信records始终保留，业务平衡另按模块给出的重量、时长、电量或座席数量核对。
 相同输入摘要、规则版本、参数产生相同批次ID。运行原子插入SQLite；复核使用整数版本乐观锁。
 
 ## 已知不覆盖
